@@ -5,9 +5,7 @@ numpy
 joblib
 matplotlib
 seaborn
-streamlit
-pandas
-scikit-learn
-numpy
+
+
 
 
