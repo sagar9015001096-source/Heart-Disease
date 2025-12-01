@@ -10,18 +10,16 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 
 
-# -------------------- 1) MODEL LOADING & TRAINING --------------------
+# -------------------- MODEL LOADING --------------------
 
 @st.cache_resource
 def load_and_train_model(csv_file: str):
     df = pd.read_csv(csv_file)
 
-    # Clean + target
     df_clean = df.copy().drop(['id', 'dataset'], axis=1)
     df_clean['target'] = df_clean['num'].apply(lambda x: 0 if x == 0 else 1)
     df_clean = df_clean.drop('num', axis=1)
 
-    # Map codes -> labels (so they match the form options)
     sex_map = {0: "Female", 1: "Male"}
     cp_map = {1: 'typical angina', 2: 'atypical angina', 3: 'non-anginal', 4: 'asymptomatic'}
     restecg_map = {0: 'normal', 1: 'st-t abnormality', 2: 'lv hypertrophy'}
@@ -44,19 +42,9 @@ def load_and_train_model(csv_file: str):
     num_cols = ['age', 'trestbps', 'chol', 'thalch', 'oldpeak', 'ca']
     cat_cols = ['sex', 'cp', 'fbs', 'restecg', 'exang', 'slope', 'thal']
 
-    num_transformer = Pipeline(
-        steps=[
-            ('imputer', SimpleImputer(strategy='median')),
-            ('scaler', StandardScaler())
-        ]
-    )
-
-    cat_transformer = Pipeline(
-        steps=[
-            ('imputer', SimpleImputer(strategy='most_frequent')),
-            ('onehot', OneHotEncoder(handle_unknown='ignore'))
-        ]
-    )
+    num_transformer = Pipeline([('imputer', SimpleImputer(strategy='median')), ('scaler', StandardScaler())])
+    cat_transformer = Pipeline([('imputer', SimpleImputer(strategy='most_frequent')),
+                                ('onehot', OneHotEncoder(handle_unknown='ignore'))])
 
     preprocessor = ColumnTransformer(
         transformers=[
@@ -65,99 +53,180 @@ def load_and_train_model(csv_file: str):
         ]
     )
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,
+                                                        random_state=42, stratify=y)
 
-    model = Pipeline(
-        steps=[
-            ('preprocessor', preprocessor),
-            ('classifier', RandomForestClassifier(n_estimators=100, random_state=42)),
-        ]
-    )
+    model = Pipeline([('preprocessor', preprocessor),
+                      ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))])
 
     model.fit(X_train, y_train)
     accuracy = accuracy_score(y_test, model.predict(X_test))
-
     return model, X.columns.tolist(), accuracy, df_clean
 
 
-# -------------------- 2) BASIC CONFIG & THEME --------------------
-
+# -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="Heart Disease Prediction", layout="wide")
 
-# Custom CSS for nicer UI
-custom_css = """
+# -------------------- CUSTOM CSS --------------------
+st.markdown("""
 <style>
-/* Remove Streamlit default padding and header */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
+#MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
 
-/* Background */
 .stApp {
-    background: radial-gradient(circle at top left, #f0f4ff 0, #ffffff 50%, #f9f9ff 100%);
-    font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: radial-gradient(circle at top left, #e7effc 0, #ffffff 50%, #fdfdff 100%);
+    font-family: "Segoe UI", system-ui;
 }
 
 /* Title */
 .big-title {
-    font-size: 2.3rem;
+    font-size: 2.4rem;
     font-weight: 800;
     color: #0F172A;
-    margin-bottom: 0.25rem;
 }
-
 .sub-title {
-    font-size: 1rem;
-    color: #4B5563;
-    margin-bottom: 1.2rem;
+    font-size: 1.05rem;
+    color: #374151;
+    margin-bottom: 1rem;
 }
 
-/* Card style */
+/* Card */
 .card {
-    background: #ffffff;
+    background: white;
+    padding: 1.3rem;
     border-radius: 14px;
-    padding: 1.2rem 1.4rem;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-    border: 1px solid rgba(148, 163, 184, 0.25);
-}
-
-/* Metrics row */
-.metric-label {
-    font-size: 0.85rem;
-    color: #6B7280;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-.metric-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #111827;
-}
-
-/* Tabs */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 0.4rem;
-}
-.stTabs [data-baseweb="tab"] {
-    padding: 0.4rem 1rem;
-    border-radius: 999px;
-    background-color: #E5E7EB;
-}
-.stTabs [aria-selected="true"] {
-    background-color: #1D4ED8 !important;
-    color: white !important;
-}
-
-/* Form labels */
-.stSlider label, .stNumberInput label, .stSelectbox label {
-    font-weight: 500 !important;
-    color: #111827 !important;
+    box-shadow: 0 4px 20px rgba(50,50,93,.1);
+    border: 1px solid rgba(0,0,0,.05);
 }
 </style>
-"""
-st.markdown(custom_css, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-# load model
+
+# -------------------- LOAD TRAINED MODEL --------------------
 try:
+    model, feature_cols, model_accuracy, data = load_and_train_model("heart_disease_uci.csv")
+except Exception as e:
+    st.error(f"Error loading model or CSV file: {e}")
+    st.stop()
+
+
+# -------------------- RISK LABEL --------------------
+def get_risk_label(prob_disease):
+    if prob_disease < 0.25: return "Low"
+    elif prob_disease < 0.50: return "Moderate"
+    elif prob_disease < 0.75: return "High"
+    return "Very High"
+
+
+# -------------------- HOME PAGE --------------------
+def home_page():
+    st.markdown('<div class="big-title">💖 Heart Disease Prediction System</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Artificial Intelligence for clinical decision support</div>', unsafe_allow_html=True)
+
+    left, right = st.columns([2, 1])
+    with left:
+        st.write("""
+This interactive ML-powered platform estimates the **probability of heart disease** 
+based on clinical patient details.
+
+You can:
+- Perform predictions  
+- Explore dataset visualizations  
+- Export results  
+- Use the app for **final-year project & seminars**
+""")
+    with right:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.write("### 📌 Model Summary")
+        st.write(f"**Accuracy:** `{model_accuracy*100:.1f}%`")
+        st.write(f"**Dataset Samples:** `{len(data)}`")
+        st.write(f"**Disease Cases:** `{(data['target']==1).sum()}`")
+        st.write('</div>', unsafe_allow_html=True)
+
+    st.markdown("### 🔍 Sample Dataset")
+    st.dataframe(data.head(), use_container_width=True)
+
+
+# -------------------- PREDICTION PAGE --------------------
+def prediction_page():
+    st.markdown('<div class="big-title">🩺 Predict Heart Disease</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Enter patient clinical details</div>', unsafe_allow_html=True)
+
+    with st.form("prediction_form"):
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            age = st.slider("Age", 18, 100, 50)
+            trestbps = st.number_input("Resting BP (mm Hg)", 80, 200, 120)
+            chol = st.number_input("Cholesterol (mg/dL)", 100, 600, 240)
+            thalch = st.number_input("Max Heart Rate", 70, 220, 150)
+        with c2:
+            sex = st.selectbox("Sex", ("Male", "Female"))
+            cp = st.selectbox("Chest Pain Type", ('typical angina', 'atypical angina', 'non-anginal', 'asymptomatic'))
+            fbs = st.selectbox("Fasting Blood Sugar > 120", ('True', 'False'))
+            exang = st.selectbox("Exercise Induced Angina", ('True', 'False'))
+
+        slope = st.selectbox("ST Slope", ('upsloping', 'flat', 'downsloping'))
+        restecg = st.selectbox("Resting ECG", ('lv hypertrophy', 'normal', 'st-t abnormality'))
+        ca = st.slider("Major Vessels (0–3)", 0, 3, 0)
+        thal = st.selectbox("Thallium Test Result", ('normal', 'fixed defect', 'reversable defect'))
+        oldpeak = st.number_input("Oldpeak", 0.0, 6.2, 1.0, step=0.1)
+
+        submitted = st.form_submit_button("🔍 Predict Risk", use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    if submitted:
+        input_data = {'age': age, 'sex': sex, 'cp': cp, 'trestbps': trestbps, 'chol': chol,
+                      'thalch': thalch, 'oldpeak': oldpeak, 'fbs': fbs, 'restecg': restecg,
+                      'exang': exang, 'slope': slope, 'ca': ca, 'thal': thal}
+
+        df_input = pd.DataFrame([input_data], columns=feature_cols)
+        pred = model.predict(df_input)[0]
+        proba = model.predict_proba(df_input)[0]
+        prob = float(proba[1])
+        risk = get_risk_label(prob)
+
+        st.markdown("## 🧾 Result")
+        if pred == 1:
+            st.error(f"High Risk ({prob:.2%}) — {risk}")
+        else:
+            st.success(f"Low Risk ({1-prob:.2%}) — {risk}")
+        st.progress(int(prob * 100))
+
+
+# -------------------- DASHBOARD PAGE --------------------
+def dashboard_page():
+    st.markdown('<div class="big-title">📊 Dashboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-title">Dataset visual summary</div>', unsafe_allow_html=True)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.write("**Target Distribution**")
+        st.bar_chart(data["target"].value_counts().sort_index())
+    with c2:
+        st.write("**Average Cholesterol by Status**")
+        st.bar_chart(data.groupby("target")["chol"].mean())
+
+    st.write("**Age Distribution**")
+    st.line_chart(data["age"].value_counts().sort_index())
+
+
+# -------------------- ABOUT PAGE --------------------
+def about_page():
+    st.markdown('<div class="big-title">ℹ️ About</div>', unsafe_allow_html=True)
+    st.write("""
+This project demonstrates **Machine Learning + Streamlit integration** for heart
+disease detection using **clinical attributes**.
+
+✔ Final-year project ready  
+✔ Clean dashboard and prediction UI  
+✔ Exportable + reusable  
+""")
+
+
+# -------------------- TOP NAVIGATION --------------------
+tabs = st.tabs(["🏠 Home", "🩺 Prediction", "📊 Dashboard", "ℹ️ About"])
+
+with tabs[0]: home_page()
+with tabs[1]: prediction_page()
+with tabs[2]: dashboard_page()
+with tabs[3]: about_page()
