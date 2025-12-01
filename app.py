@@ -156,7 +156,7 @@ This tool predicts the chance of heart disease based on clinical parameters.
 
 ✔ AI-powered prediction  
 ✔ Interactive dashboard  
-✔ Final-year project ready  
+  
         """)
 
     with c2:
@@ -256,5 +256,6 @@ with tabs[0]: home()
 with tabs[1]: prediction()
 with tabs[2]: dashboard()
 with tabs[3]: about()
+
 
 
