@@ -131,7 +131,7 @@ body, .stApp {
 try:
     model, feature_cols, model_accuracy, data = load_and_train_model("heart_disease_uci.csv")
 except Exception as e:
-    st.error(f"❌ CSV/MODEL ERROR: {e}")
+    st.error(f" CSV/MODEL ERROR: {e}")
     st.stop()
 
 
@@ -148,7 +148,7 @@ def home():
     c1, c2 = st.columns([2,1])
 
     with c1:
-        st.markdown('<div class="big-title">💖 Heart Disease Prediction System</div>', unsafe_allow_html=True)
+        st.markdown('<div class="big-title"> Heart Disease Prediction System</div>', unsafe_allow_html=True)
         st.markdown('<div class="sub-title">Machine learning–based clinical decision support.</div>', unsafe_allow_html=True)
 
         st.write("""
@@ -161,7 +161,7 @@ This tool predicts the chance of heart disease based on clinical parameters.
 
     with c2:
         st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.write("### 📌 ML Model Overall Stats")
+        st.write(" ML Model Overall Stats")
         st.write(f"**Accuracy:** `{model_accuracy * 100:.2f}%`")
         total = len(data)
         st.write(f"**Records:** `{total}`")
@@ -173,7 +173,7 @@ This tool predicts the chance of heart disease based on clinical parameters.
 
 
 def prediction():
-    st.markdown('<div class="big-title">🩺 Prediction</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title"> Prediction</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-title">Enter patient clinical values.</div>', unsafe_allow_html=True)
 
     with st.form("form"):
@@ -220,7 +220,7 @@ def prediction():
 
 
 def dashboard():
-    st.markdown('<div class="big-title">📊 Dashboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title"> Dashboard</div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
 
     with col1:
@@ -236,7 +236,7 @@ def dashboard():
 
 
 def about():
-    st.markdown('<div class="big-title">ℹ️ About</div>', unsafe_allow_html=True)
+    st.markdown('<div class="big-title"> About</div>', unsafe_allow_html=True)
     st.write("""
 Heart Disease Prediction using:
 - Python, Pandas, NumPy
@@ -251,9 +251,10 @@ Heart Disease Prediction using:
 
 
 # ================= TABS NAVIGATION =================
-tabs = st.tabs(["🏠 Home", "🩺 Prediction", "📊 Dashboard", "ℹ️ About"])
+tabs = st.tabs([" Home", " Prediction", " Dashboard", " About"])
 with tabs[0]: home()
 with tabs[1]: prediction()
 with tabs[2]: dashboard()
 with tabs[3]: about()
+
 
