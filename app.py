@@ -246,7 +246,6 @@ Heart Disease Prediction using:
 ✔ Ideal for final-year academic project  
 ✔ Includes ML + dashboard + prediction UI  
 
-⚠ For **educational use only** — not a medical device.
 """)
 
 
@@ -256,6 +255,7 @@ with tabs[0]: home()
 with tabs[1]: prediction()
 with tabs[2]: dashboard()
 with tabs[3]: about()
+
 
 
 
